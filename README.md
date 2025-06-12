@@ -48,7 +48,7 @@ Use the UI to:
 
 - Delete individual items
 
-- Search feature coming soon.
+- ~Search feature coming soon.~
 
 📦 Build Instructions
 
