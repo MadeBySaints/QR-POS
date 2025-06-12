@@ -1,4 +1,5 @@
-🛍️ QR Code Generator for Item Pricing - Meant for small business.
+# 🛍️ QR Code Generator for Item Pricing
+## Meant for small business.
 A simple desktop application for generating printable QR codes that encode item details for selling goods. Built with Python and Tkinter, this app allows users to easily manage, view, and print item labels — complete with item name, unique ID, and price.
 More features may be available in the future. Submit pull requests!
 
