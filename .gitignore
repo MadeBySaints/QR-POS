@@ -1,6 +1,4 @@
-app.spec
 /dist
 /build
 /qrcodes
-item_data.txt
 *.spec
