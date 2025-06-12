@@ -1,0 +1,16 @@
+app.spec
+build/app/Analysis-00.toc
+build/app/app.pkg
+build/app/base_library.zip
+build/app/EXE-00.toc
+build/app/localpycs/pyimod01_archive.pyc
+build/app/localpycs/pyimod02_importers.pyc
+build/app/localpycs/pyimod03_ctypes.pyc
+build/app/localpycs/pyimod04_pywin32.pyc
+build/app/localpycs/struct.pyc
+build/app/PKG-00.toc
+build/app/PYZ-00.pyz
+build/app/PYZ-00.toc
+build/app/warn-app.txt
+build/app/xref-app.html
+dist/app.exe
