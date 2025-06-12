@@ -3,3 +3,4 @@ app.spec
 /build
 /qrcodes
 item_data.txt
+*.spec
