@@ -55,9 +55,44 @@ def generate_qr():
     items.append(item_data)
     save_items()
 
-    qr = qrcode.make(json.dumps(item_data))
+    # Generate QR code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(json.dumps(item_data))
+    qr.make(fit=True)
+    
+    # Create the QR code image
+    qr_img = qr.make_image(fill_color="black", back_color="white")
+    qr_img = qr_img.convert("RGB")  # Ensure it's in RGB mode
+    
+    # Create a new image with space for text below QR code
+    qr_width, qr_height = qr_img.size
+    text_height = 30  # Space for text
+    combined_img = Image.new("RGB", (qr_width, qr_height + text_height), "white")
+    combined_img.paste(qr_img, (0, 0))
+    
+    # Add text (UID) below the QR code
+    from PIL import ImageDraw, ImageFont
+    draw = ImageDraw.Draw(combined_img)
+    
+    try:
+        # Try to use a nice font if available
+        font = ImageFont.truetype("arial.ttf", 16)
+    except:
+        # Fallback to default font
+        font = ImageFont.load_default()
+    
+    text = f"UID: {uid}"
+    text_width = draw.textlength(text, font=font)
+    draw.text(((qr_width - text_width) // 2, qr_height + 5), text, font=font, fill="black")
+    
+    # Save the combined image
     qr_path = os.path.join(CONFIG["qr_output_dir"], f"{uid}.png")
-    qr.save(qr_path)
+    combined_img.save(qr_path)
 
     update_item_list()
     show_item(item_data)
@@ -65,9 +100,10 @@ def generate_qr():
     entry_name.delete(0, tk.END)
     entry_price.delete(0, tk.END)
 
-def update_item_list():
+def update_item_list(filtered_items=None):
     item_list.delete(*item_list.get_children())
-    for item in reversed(items):  # newest on top
+    display_items = filtered_items if filtered_items is not None else items
+    for item in reversed(display_items):
         item_list.insert("", "end", values=(item["uid"], item["name"], f"${item['price']:.2f}"))
 
 def show_item(item_data):
@@ -98,32 +134,54 @@ def on_item_select(event):
         show_item(item)
 
 def delete_selected():
-    selected = item_list.focus()
-    if not selected:
-        messagebox.showinfo("No selection", "Please select an item to delete.")
+    selected_items = item_list.selection()  # Get all selected items
+    if not selected_items:
+        messagebox.showinfo("No selection", "Please select item(s) to delete.")
         return
 
-    values = item_list.item(selected, 'values')
-    uid = values[0]
+    # Get all UIDs from selected items
+    uids_to_delete = []
+    for item in selected_items:
+        values = item_list.item(item, 'values')
+        uids_to_delete.append(values[0])
 
-    confirm = messagebox.askyesno("Confirm Delete", f"Are you sure you want to delete item UID {uid}?")
-    if not confirm:
+    if not messagebox.askyesno(
+        "Confirm Delete", 
+        f"Are you sure you want to delete {len(uids_to_delete)} item(s)?\n" +
+        f"UIDs: {', '.join(uids_to_delete)}"
+    ):
         return
 
     global items
-    items = [i for i in items if i["uid"] != uid]
+    deleted_count = 0
+    
+    for uid in uids_to_delete:
+        # Remove from items list
+        items = [i for i in items if i["uid"] != uid]
+        
+        # Delete QR code file
+        qr_path = os.path.join(CONFIG["qr_output_dir"], f"{uid}.png")
+        try:
+            if os.path.exists(qr_path):
+                os.remove(qr_path)
+                deleted_count += 1
+        except Exception as e:
+            messagebox.showerror("Delete Error", f"Could not delete QR code for UID {uid}:\n{e}")
+
     save_items()
-
-    qr_path = os.path.join(CONFIG["qr_output_dir"], f"{uid}.png")
-    if os.path.exists(qr_path):
-        os.remove(qr_path)
-
     update_item_list()
+    
+    # Clear the display after deletion
     qr_label.config(image=blank_qr_image)
     qr_label.image = blank_qr_image
     item_info_box.config(state="normal")
     item_info_box.delete(1.0, tk.END)
     item_info_box.config(state="disabled")
+    
+    messagebox.showinfo(
+        "Deletion Complete", 
+        f"Successfully deleted {deleted_count} item(s)."
+    )
 
 def create_blank_image(size=(200, 200), color="white"):
     img = Image.new("RGB", size, color)
@@ -152,6 +210,14 @@ def print_selected():
             subprocess.run(["xdg-open", qr_path])
     except Exception as e:
         messagebox.showerror("Print Error", f"Could not print QR code:\n{e}")
+
+def search_items():
+    query = search_entry.get().strip().lower()
+    if not query:
+        update_item_list()
+        return
+    filtered = [i for i in items if query in i["name"].lower() or query in i["uid"]]
+    update_item_list(filtered)
 
 # --- UI SETUP ---
 root = tk.Tk()
@@ -186,6 +252,17 @@ qr_label.image = blank_qr_image
 item_info_box = tk.Text(display_frame, font=("Arial", 12), height=3, wrap="word", width=50)
 item_info_box.pack(pady=5)
 item_info_box.config(state="disabled")
+
+# --- SEARCH BAR ---
+search_frame = tk.Frame(root)
+search_frame.pack(padx=10, pady=5)
+
+search_entry = tk.Entry(search_frame, width=40)
+search_entry.pack(side="left", padx=(0, 5))
+search_btn = tk.Button(search_frame, text="Search", command=search_items)
+search_btn.pack(side="left")
+clear_btn = tk.Button(search_frame, text="Clear", command=lambda: update_item_list())
+clear_btn.pack(side="left", padx=(5, 0))
 
 # --- ITEM LIST TABLE ---
 table_frame = tk.Frame(root)
