@@ -14,3 +14,4 @@ build/app/PYZ-00.toc
 build/app/warn-app.txt
 build/app/xref-app.html
 dist/app.exe
+/build
